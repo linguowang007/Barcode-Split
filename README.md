@@ -14,7 +14,7 @@ The Barcode-Split algorithm is encapsulated within the "split_bam_by_tag" functi
 
 1. Download the package using "git clone https://github.com/linguowang007/Barcode-Split.git".
 2. Navigate to the bebam folder.
-3. Important!!! Modify lines 9-12 in the split_bam_file.py script within the bebam folder to replace the values of the samtools, bgzip, mawk, and tabix variables with the absolute paths of these tools in your operating system.
+3. **Important!** Modify lines 9-12 in the "split_bam_file.py" script within the bebam folder to replace the values of the **"samtools"**, **"bgzip"**, **"mawk"**, and **"tabix"** variables with the absolute paths of these tools in your operating system.
 4. Return to the parent directory and execute "python setup.py install" in the terminal to complete the installation of the bebam package.
 
 
