@@ -1,7 +1,7 @@
 # Description
 The Barcode-Split algorithm is encapsulated within the Python package **barcode_split**.
 
-This algorithm is specifically designed to split BAM files by distinct tag values. 
+This algorithm is designed to split BAM files by distinct tag values. 
 
 Barcode-split constructs an index of tag values within the SAM file, enabling rapid retrieval of barcode-tagged alignments.
 # Dependencies for the barcode_split Package:
