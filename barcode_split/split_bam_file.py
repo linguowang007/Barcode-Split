@@ -6,8 +6,6 @@ import argparse
 from collections import defaultdict
 from multiprocessing import Pool, set_start_method
 
-set_start_method('spawn')
-
 samtools = rf'/data/home/lingw/bin/bin/samtools'  # version 1.16.1 or higher, support "view --tag-file"
 bgzip = rf'/data/home/lingw/bin/bin/bgzip'
 mawk = '/data/home/lingw/anaconda3/bin/mawk'
@@ -180,4 +178,5 @@ def main():
 
 
 if __name__ == '__main__':
+    set_start_method('spawn')
     main()
