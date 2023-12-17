@@ -4,17 +4,9 @@ import logging
 import itertools
 import argparse
 from collections import defaultdict
+from .exception import SplitBAMError
+from .dependence import samtools, tabix, bgzip, mawk
 from multiprocessing import Pool, set_start_method
-
-samtools = rf'/data/home/lingw/bin/bin/samtools'  # version 1.16.1 or higher, support "view --tag-file"
-bgzip = rf'/data/home/lingw/bin/bin/bgzip'
-mawk = '/data/home/lingw/anaconda3/bin/mawk'
-tabix = '/data/home/lingw/bin/bin/tabix'
-tools = [samtools, bgzip, mawk, tabix]
-
-
-class SplitBAMError(Exception):
-    pass
 
 
 def pairwise(iterable):  # ABCD -> (A, B), (B, C), (C, D)
@@ -90,8 +82,6 @@ def split_bam_by_tag(bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
         """
     if os.path.exists(out_dir):
         raise SplitBAMError(f'{out_dir} already exists.')
-    if any(not os.path.exists(i) for i in tools):
-        raise SplitBAMError('Samtools, Bgzip, Mawk and Tabix was required.')
     with open(tag_list) as f:
         tag_values = [i.strip() for i in f]
     if 'header' in tag_values:  # "header" was reserved word
