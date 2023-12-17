@@ -1,0 +1,2 @@
+class SplitBAMError(Exception):
+    pass
