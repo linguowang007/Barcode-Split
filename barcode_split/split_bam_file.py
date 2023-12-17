@@ -6,6 +6,8 @@ import argparse
 from collections import defaultdict
 from multiprocessing import Pool, set_start_method
 
+set_start_method('spawn')
+
 samtools = rf'/data/home/lingw/bin/bin/samtools'  # version 1.16.1 or higher, support "view --tag-file"
 bgzip = rf'/data/home/lingw/bin/bin/bgzip'
 mawk = '/data/home/lingw/anaconda3/bin/mawk'
@@ -88,7 +90,6 @@ def split_bam_by_tag(bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
                          tag="CB",
                          tag_type="Z")
         """
-    set_start_method('spawn')
     if os.path.exists(out_dir):
         raise SplitBAMError(f'{out_dir} already exists.')
     if any(not os.path.exists(i) for i in tools):
@@ -98,10 +99,10 @@ def split_bam_by_tag(bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
     if 'header' in tag_values:  # "header" was reserved word
         raise SplitBAMError('Barcode list contain "header" as values.')
     logging.basicConfig(format='%(message)s', level=logging.INFO, filename=f'{out_dir}.log')
-    
+
     with Pool(nt) as p:
         start_time = time.monotonic()
-        
+
         t1 = time.monotonic()
         # sort bam by TAG and bgzip and index
         sort_cmd = rf'''mkdir -p {out_dir}
@@ -112,7 +113,7 @@ def split_bam_by_tag(bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
         if not os.path.exists(f'{out_dir}/sub-set.sam.gz.gzi'):
             raise SplitBAMError('Fail to index the sorted SAM file.')
         logging.info(f'Sort by {tag}: {round(time.monotonic() - t1, 2)} sec.')
-        
+
         t1 = time.monotonic()
         # index each chunk with multiple threads
         break_pos_list = estimate_break_position(f'{out_dir}/sub-set.sam.gz')
@@ -126,17 +127,17 @@ def split_bam_by_tag(bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
             {tabix} -l {out_dir}/sub-set-{num}.sam.tag.gz > {out_dir}/sub-set-{num}.sam.tag.gz.id'''
                      for num, (start, size) in enumerate(break_pos_list)]
         chunk_index = [f'{out_dir}/sub-set-{num}.sam.tag.gz' for num, _ in enumerate(break_pos_list)]
-        
+
         p.map(os.system, index_cmd, chunksize=1)  # index with multiple threads
         if any(not os.path.exists(f'{i}.csi') for i in chunk_index):
             raise SplitBAMError('Barcode ID blocks not continuous.')
-        
+
         chunk_tag = []
         for i in chunk_index:
             with open(f'{i}.id') as f:
                 chunk_tag.append([i.strip() for i in f])
         chunk_tag = list(dedup(itertools.chain.from_iterable(chunk_tag)))
-        
+
         final_index = defaultdict(int)
         for key, val in itertools.chain.from_iterable(p.map(get_tag_chunk, chunk_index)):
             final_index[key] += val
@@ -144,7 +145,7 @@ def split_bam_by_tag(bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
         final_index = [(a, b, c) for (a, b), c in zip(final_index, itertools.accumulate(i[-1] for i in final_index))]
         final_index = [(row2[0], row1[-1], row2[1]) for row1, row2 in pairwise(final_index)]  # barcode, start, length
         logging.info(f'Make index: {round(time.monotonic() - t1, 2)} sec.')
-        
+
         t1 = time.monotonic()
         # split sorted BAM file by tag IDs
         header = f'{out_dir}/sub-set.header'
@@ -157,7 +158,7 @@ def split_bam_by_tag(bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
                     rm {" ".join(i + ".id" for i in chunk_index)}
                     rm {out_dir}/sub-set.sam.gz {out_dir}/sub-set.sam.gz.gzi''')
     logging.info(f'Split {len(chunk_tag) - 1} barcodes ({out_dir}) total: {round(time.monotonic() - start_time, 2)}s.')
-    
+
     return {cell: f'{out_dir}/{cell}.sort.bam' for cell, *_ in final_index}
 
 
