@@ -17,7 +17,7 @@ Barcode-split constructs an index of tag values within the SAM file, enabling ra
 
 1. Download the source files using "**git clone ``https://github.com/linguowang007/Barcode-Split.git``**".
 2. Navigate to the **barcode_split** folder.
-3. **Important!** Modify lines 9-12 in the "**split_bam_file.py**" script within the **barcode_split** folder, replace the values of the "**samtools**", "**bgzip**", "**mawk**", and "**tabix**" variables with the absolute paths of these tools in your operating system.
+3. **Important!** Modify the "**dependence.py**" script within the **barcode_split** folder, replace the values of the "**samtools**", "**bgzip**", "**mawk**", and "**tabix**" variables with the absolute paths of these tools in your operating system.
 4. Return to the parent directory and execute "**python setup.py install**" in the terminal to complete the installation of the **barcode_split** package.
 
 
