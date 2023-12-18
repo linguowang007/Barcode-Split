@@ -7,18 +7,18 @@ mawk = '/data/home/lingw/anaconda3/bin/mawk'
 tabix = '/data/home/lingw/bin/bin/tabix'
 
 tools = [samtools, bgzip, mawk, tabix]
+script_path = os.path.abspath(__file__)
 
 for i in tools:
     if not os.path.exists(i):
-        script_path = os.path.abspath(__file__)
-        raise SplitBAMError(f'{i} not found. Please modify absolute path in {script_path}')
+        raise SplitBAMError(f'{i} not found. Please modify variable in {script_path}')
 
-# check "samtools view --tag-file" and "samtools sort -t" 
+# check "samtools view --tag-file" and "samtools sort -t"
 with os.popen(f'{samtools} view') as h1, os.popen(f'{samtools} sort') as h2:
     m1 = (line.split() for line in h1)
     if not any('--tag-file' in i for i in m1):
-        raise SplitBAMError(f'{samtools} view --tag-file not supported.')
+        raise SplitBAMError(f'{samtools} view --tag-file not supported. Please update samtools in {script_path}')
     
     m2 = (line.split() for line in h2)
     if not any('-t' in i for i in m2):
-        raise SplitBAMError(f'{samtools} sort -t not supported.')
+        raise SplitBAMError(f'{samtools} sort -t not supported. Please update samtools in {script_path}')
