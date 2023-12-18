@@ -65,4 +65,5 @@ wget ftp://ftp.ncbi.nlm.nih.gov/geo/samples/GSM2560nnn/GSM2560245/suppl/GSM25602
 
 gunzip GSM2560245_barcodes.tsv.gz
 
-split_bam_by_tag --bam A.merged.bam --tag_list GSM2560245_barcodes.tsv --out_dir split-test```
+split_bam_by_tag --bam A.merged.bam --tag_list GSM2560245_barcodes.tsv --out_dir split-test
+```
