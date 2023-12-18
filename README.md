@@ -32,6 +32,7 @@ After installing **barcode_split** package, the **split_bam_by_tag** tool is aut
 split_bam_by_tag [-h] --bam BAM --tag_list TAG_LIST --out_dir OUT_DIR [--nt NT] [--tag TAG] [--tag_type TAG_TYPE]
 
 ### Example command in the terminal:
+
 ```split_bam_by_tag --bam bamfile.bam --tag_list tags.txt --out_dir output-dir-name --nt 8 --tag CB --tag_type Z```
 
 This command will split bamfile.bam by the values of CB and output the sub-BAM files to output-dir-name.
