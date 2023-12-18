@@ -7,7 +7,7 @@ Barcode-split constructs an index of tag values within the SAM file, enabling ra
 # Dependencies for the barcode_split Package:
 
 1. Python version 3.6 or higher
-2. Samtools (must support the "**samtools view –tag-file**" and "**samtools sort -t**" parameters)
+2. Samtools (must support the "**samtools view --tag-file**" and "**samtools sort -t**" parameters)
 3. Bgzip
 4. Mawk
 5. Tabix
