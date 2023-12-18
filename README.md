@@ -38,7 +38,6 @@ This command will split bamfile.bam by the values of CB and output the sub-BAM f
 
 ## As a Python Package Called from Other Python Scripts. 
 Add the following code to your Python script (or an interactive Python session):
-### test.py：
 ```
 from barcode_split import split_bam_by_tag
 
