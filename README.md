@@ -39,7 +39,8 @@ This command will split bamfile.bam by the values of CB and output the sub-BAM f
 ## As a Python Package Called from Other Python Scripts. 
 Add the following code to your Python script (or an interactive Python session):
 ### test.py：
-```from barcode_split import split_bam_by_tag
+```
+from barcode_split import split_bam_by_tag
 
 help(split_bam_by_tag) # help information of split_bam_by_tag function
 
@@ -55,7 +56,8 @@ split_result = split_bam_by_tag(bam="path/to/bamfile.bam",
 
 # Run test on Demuxlet paper data
 
-```wget https://sra-pub-src-1.s3.amazonaws.com/SRR5398235/A.merged.bam.1 -O A.merged.bam
+```
+wget https://sra-pub-src-1.s3.amazonaws.com/SRR5398235/A.merged.bam.1 -O A.merged.bam
 
 samtools index -@ 8 A.merged.bam
 
