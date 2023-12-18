@@ -39,7 +39,7 @@ def estimate_break_position(bgzip_file, chunk_size=1000000000):
     break_pos_list = [break_pos]
     while True:
         break_pos += chunk_size
-        with os.popen(f'bgzip -b {break_pos} {bgzip_file} | head -1 ') as f:
+        with os.popen(f'{bgzip} -b {break_pos} {bgzip_file} | head -1 ') as f:
             try:
                 extend = [len(i) for i in f][0]  # when out of file end, meet IndexError
                 break_pos += extend
