@@ -118,7 +118,7 @@ def split_bam_by_tag(bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
             chunk_tag = [i.strip() for i in f]
         
         final_index = Counter()
-        for c in p.map(get_tag_chunk, chunk_index):
+        for c in p.map(get_tag_chunk, chunk_index, chunksize=1):
             final_index.update(c)
         
         final_index = [(key, final_index[key]) for key in chunk_tag]
