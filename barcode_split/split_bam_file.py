@@ -1,9 +1,10 @@
+import gzip
 import os
 import time
 import logging
 import itertools
 import argparse
-from collections import defaultdict
+from collections import Counter
 from .exception import SplitBAMError
 from .dependence import samtools, tabix, bgzip, mawk
 from multiprocessing import Pool
@@ -16,21 +17,12 @@ def pairwise(iterable):  # ABCD -> (A, B), (B, C), (C, D)
 
 
 def get_tag_chunk(chunk_file):
-    barcode_size = []
-    with os.popen(f'{tabix} -l {chunk_file}') as h1:
-        tokens = [i.strip() for i in h1]
-    for i in tokens:
-        with os.popen(f'{tabix} {chunk_file} {i}') as h1:
-            barcode_size.append([i, sum(int(line.split()[-1]) for line in h1)])
+    barcode_size = Counter()
+    with gzip.open(chunk_file, 'rt') as h1:
+        for line in h1:
+            parts = line.split()
+            barcode_size[parts[0]] += int(parts[-1])
     return barcode_size
-
-
-def dedup(items):  # drop the duplicated value in iterable, while keeping order
-    see = set()
-    for i in items:
-        if i not in see:
-            yield i
-            see.add(i)
 
 
 def estimate_break_position(bgzip_file, chunk_size=1000000000):
@@ -120,15 +112,15 @@ def split_bam_by_tag(bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
         if any(not os.path.exists(f'{i}.csi') for i in chunk_index):
             raise SplitBAMError('Barcode ID blocks not continuous.')
         
-        chunk_tag = []
-        for i in chunk_index:
-            with open(f'{i}.id') as f:
-                chunk_tag.append([i.strip() for i in f])
-        chunk_tag = list(dedup(itertools.chain.from_iterable(chunk_tag)))
+        chunk_tag = [f'{i}.id' for i in chunk_index]
+        os.system(rf'''cat {' '.join(chunk_tag)} | {mawk} '!see[$0]++' > {out_dir}/cell-order.txt''')
+        with open(f'{out_dir}/cell-order.txt') as f:
+            chunk_tag = [i.strip() for i in f]
         
-        final_index = defaultdict(int)
-        for key, val in itertools.chain.from_iterable(p.map(get_tag_chunk, chunk_index)):
-            final_index[key] += val
+        final_index = Counter()
+        for c in p.map(get_tag_chunk, chunk_index):
+            final_index.update(c)
+        
         final_index = [(key, final_index[key]) for key in chunk_tag]
         final_index = [(a, b, c) for (a, b), c in zip(final_index, itertools.accumulate(i[-1] for i in final_index))]
         final_index = [(row2[0], row1[-1], row2[1]) for row1, row2 in pairwise(final_index)]  # barcode, start, length
@@ -144,7 +136,7 @@ def split_bam_by_tag(bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
         logging.info(f'Split file: {round(time.monotonic() - t1, 2)} sec.')
         os.system(rf'''rm {header} {" ".join(chunk_index)} {" ".join(i + ".csi" for i in chunk_index)}
                     rm {" ".join(i + ".id" for i in chunk_index)}
-                    rm {out_dir}/sub-set.sam.gz {out_dir}/sub-set.sam.gz.gzi''')
+                    rm {out_dir}/sub-set.sam.gz {out_dir}/sub-set.sam.gz.gzi {out_dir}/cell-order.txt''')
     logging.info(f'Split {len(chunk_tag) - 1} barcodes ({out_dir}) total: {round(time.monotonic() - start_time, 2)}s.')
     
     return {cell: f'{out_dir}/{cell}.sort.bam' for cell, *_ in final_index}
