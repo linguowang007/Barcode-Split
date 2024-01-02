@@ -6,11 +6,11 @@ This algorithm is designed to split BAM files by list of tag values.
 Barcode-split constructs an index of tag values within the SAM file, enabling rapid retrieval of barcode-tagged alignments.
 # Dependencies for the barcode_split Package
 To use the `barcode_split` package, please ensure the following dependencies are met and that the path of these executable tools are added to the `$PATH` environment variable:
-1. Python version 3.6 or higher
-2. Samtools (must support the "**samtools view --tag-file**" and "**samtools sort -t**" parameters)
-3. Bgzip
-4. Mawk
-5. Tabix
+1. python (version 3.6 or higher)
+2. samtools (must support the "**samtools view --tag-file**" and "**samtools sort -t**" parameters)
+3. bgzip
+4. mawk
+5. tabix
 
 
 # Installation of the barcode_split Package
