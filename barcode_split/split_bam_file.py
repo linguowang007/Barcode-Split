@@ -16,13 +16,16 @@ def pairwise(iterable):  # ABCD -> (A, B), (B, C), (C, D)
     return zip(a, b)
 
 
-def get_tag_chunk(chunk_file):
-    barcode_size = Counter()
-    with gzip.open(chunk_file, 'rt') as h1:
-        for line in h1:
-            parts = line.split()
-            barcode_size[parts[0]] += int(parts[-1])
-    return barcode_size
+def de_duplicates(input_list, key=None):
+    # de_duplicates('1 2 4 2 5 4 6'.split()) --> 1 2 4 5 6
+    seen = set()
+    dedup_list = []
+    for item in input_list:
+        key_value = item if key is None else key(item)
+        if key_value not in seen:
+            seen.add(key_value)
+            dedup_list.append(item)
+    return dedup_list
 
 
 def estimate_break_position(bgzip_file, chunk_size=1000000000):
@@ -31,7 +34,7 @@ def estimate_break_position(bgzip_file, chunk_size=1000000000):
     break_pos_list = [break_pos]
     while True:
         break_pos += chunk_size
-        with os.popen(f'{bgzip} -b {break_pos} {bgzip_file} | head -1 ') as f:
+        with os.popen(f'{bgzip} -b {break_pos} {bgzip_file} | head -1') as f:
             try:
                 extend = [len(i) for i in f][0]  # when out of file end, meet IndexError
                 break_pos += extend
@@ -42,7 +45,28 @@ def estimate_break_position(bgzip_file, chunk_size=1000000000):
     return [(a1, a2 - a1) for a1, a2 in pairwise(break_pos_list)]  # start, size
 
 
-def split_bam_by_tag(bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
+def get_chunk_index(bgzip_sam, pos1, len1, out_file, tag='CB', tag_type='Z'):
+    pre_len = len(f'{tag}:{tag_type}:') + 1
+    index_cmd = rf'''{bgzip} -b {pos1} -s {len1} {bgzip_sam} | \
+        {mawk} '{{for (i=12; i<=NF; i++) {{
+            if($i~/^{tag}:{tag_type}:/){{cb=substr($i, {pre_len}); print cb"\t"see[cb]++"\t"length+1; next;}} }}
+        }}' | {bgzip}  > {out_file}
+        {tabix} -s1 -b2 -e2 -C {out_file}'''
+    with open(f'{out_file}.sh', 'wt') as h1:
+        print(index_cmd, file=h1)
+    os.system(f'sh {out_file}.sh && rm {out_file}.sh')
+    in_counter = Counter()
+    with gzip.open(f'{out_file}', 'rt') as h1:
+        for line in h1:
+            parts = line.split()
+            in_counter[parts[0]] += int(parts[-1])
+    with os.popen(f'{tabix} -l {out_file}') as h1:
+        in_cell = [i.strip() for i in h1]
+    os.system(f'rm {out_file} {out_file}.csi')
+    return in_counter, in_cell
+
+
+def split_bam_by_tag(*, bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
     """
         Help Document for split_bam_by_tag
 
@@ -74,70 +98,47 @@ def split_bam_by_tag(bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
         """
     if os.path.exists(out_dir):
         raise SplitBAMError(f'{out_dir} already exists.')
-    with open(tag_list) as f:
-        tag_values = [i.strip() for i in f]
-    if 'header' in tag_values:  # "header" was reserved word
-        raise SplitBAMError('Barcode list contain "header" as values.')
-    logging.basicConfig(format='%(message)s', level=logging.INFO, filename=f'{out_dir}.log')
     
+    logging.basicConfig(format='%(message)s', level=logging.INFO, filename=f'{out_dir}.log')
+    sam_file = f'{out_dir}/sub-set.sam.gz'
     with Pool(nt) as p:
         start_time = time.monotonic()
-        
         t1 = time.monotonic()
         # sort bam by TAG and bgzip and index
         sort_cmd = rf'''mkdir -p {out_dir}
                 {samtools} view -h -@ {nt} --tag-file {tag}:{tag_list} {bam} | \
-                {samtools} sort -@ {nt} -t {tag} -O SAM -T {out_dir}/sub-set - | \
-                {bgzip} -@ {nt} -i -I {out_dir}/sub-set.sam.gz.gzi > {out_dir}/sub-set.sam.gz'''
+                {samtools} sort -@ {nt} -t {tag} -O SAM -T {sam_file}- - | \
+                {samtools} view -@ {nt} | \
+                {bgzip} -@ {nt} -i -I {sam_file}.gzi > {sam_file}'''
         os.system(sort_cmd)
-        if not os.path.exists(f'{out_dir}/sub-set.sam.gz.gzi'):
-            raise SplitBAMError('Fail to index the sorted SAM file.')
         logging.info(f'Sort by {tag}: {round(time.monotonic() - t1, 2)} sec.')
         
         t1 = time.monotonic()
-        # index each chunk with multiple threads
-        break_pos_list = estimate_break_position(f'{out_dir}/sub-set.sam.gz')
-        pre_len = len(f'{tag}:{tag_type}:') + 1
-        index_cmd = [rf'''{bgzip} -b {start} -s {size} {out_dir}/sub-set.sam.gz | \
-            {mawk} '/^@/{{print "header\t"NR"\t"length+1; next}}
-            {{for (i=12; i<=NF; i++) {{
-                if($i~/^{tag}:{tag_type}:/){{cb=substr($i, {pre_len}); print cb"\t"see[cb]++"\t"length+1; next;}} }}
-            }}' | {bgzip}  > {out_dir}/sub-set-{num}.sam.tag.gz
-            {tabix} -s1 -b2 -e2 -C {out_dir}/sub-set-{num}.sam.tag.gz
-            {tabix} -l {out_dir}/sub-set-{num}.sam.tag.gz > {out_dir}/sub-set-{num}.sam.tag.gz.id'''
-                     for num, (start, size) in enumerate(break_pos_list)]
-        chunk_index = [f'{out_dir}/sub-set-{num}.sam.tag.gz' for num, _ in enumerate(break_pos_list)]
-        
-        p.map(os.system, index_cmd, chunksize=1)  # index with multiple threads
-        if any(not os.path.exists(f'{i}.csi') for i in chunk_index):
-            raise SplitBAMError('Barcode ID blocks not continuous.')
-        
-        chunk_tag = [f'{i}.id' for i in chunk_index]
-        os.system(rf'''cat {' '.join(chunk_tag)} | {mawk} '!see[$0]++' > {out_dir}/cell-order.txt''')
-        with open(f'{out_dir}/cell-order.txt') as f:
-            chunk_tag = [i.strip() for i in f]
-        
+        break_pos_list = estimate_break_position(sam_file)  # start pos in sam file, query length
+        # def get_chunk_index(sam_file, pos1, len1, out_file, tag='CB', tag_type='Z'):
+        args = [(sam_file, pos1, len1, f'{sam_file}-{num}.gz', tag, tag_type) for num, (pos1, len1) in
+                enumerate(break_pos_list)]
+        result1 = p.starmap(get_chunk_index, args, chunksize=1)
         final_index = Counter()
-        for c in p.map(get_tag_chunk, chunk_index, chunksize=1):
+        for c, _ in result1:  # counter, cell order
             final_index.update(c)
-        
-        final_index = [(key, final_index[key]) for key in chunk_tag]
-        final_index = [(a, b, c) for (a, b), c in zip(final_index, itertools.accumulate(i[-1] for i in final_index))]
-        final_index = [(row2[0], row1[-1], row2[1]) for row1, row2 in pairwise(final_index)]  # barcode, start, length
+        cell_order = de_duplicates(itertools.chain.from_iterable(i[-1] for i in result1))
+        cell_len = [final_index[i] for i in cell_order]
+        start_pos = [0] + list(itertools.accumulate(final_index[i] for i in cell_order))
+        final_index = list(zip(cell_order, start_pos, cell_len))  # barcode, start, length
         logging.info(f'Make index: {round(time.monotonic() - t1, 2)} sec.')
         
         t1 = time.monotonic()
         # split sorted BAM file by tag IDs
-        header = f'{out_dir}/sub-set.header'
-        os.system(f'{samtools} view -H {out_dir}/sub-set.sam.gz > {header}')
-        cmds = [rf'''{bgzip} -b {t1} -s {t2} {out_dir}/sub-set.sam.gz | cat {header} - | \
+        header = f'{sam_file}.header'
+        os.system(f'{samtools} view -H {bam} > {header}')
+        cmds = [rf'''{bgzip} -b {t1} -s {t2} {sam_file} | cat {header} - | \
                     {samtools} view --write-index -o {out_dir}/{cell}.sort.bam''' for cell, t1, t2 in final_index]
         p.map(os.system, cmds, chunksize=10)
+        os.system(f'rm {header} {sam_file} {sam_file}.gzi')
+        
         logging.info(f'Split file: {round(time.monotonic() - t1, 2)} sec.')
-        os.system(rf'''rm {header} {" ".join(chunk_index)} {" ".join(i + ".csi" for i in chunk_index)}
-                    rm {" ".join(i + ".id" for i in chunk_index)}
-                    rm {out_dir}/sub-set.sam.gz {out_dir}/sub-set.sam.gz.gzi {out_dir}/cell-order.txt''')
-    logging.info(f'Split {len(chunk_tag) - 1} barcodes ({out_dir}) total: {round(time.monotonic() - start_time, 2)}s.')
+    logging.info(f'Split {len(cell_order)} barcodes ({out_dir}) total: {round(time.monotonic() - start_time, 2)}s.')
     
     return {cell: f'{out_dir}/{cell}.sort.bam' for cell, *_ in final_index}
 
@@ -156,7 +157,9 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
-    split_bam_by_tag(args.bam, args.tag_list, args.out_dir, args.nt, args.tag, args.tag_type)
+    # bam, tag_list, out_dir, nt=16, tag='CB', tag_type
+    split_bam_by_tag(bam=args.bam, tag_list=args.tag_list, out_dir=args.out_dir, nt=args.nt, tag=args.tag,
+                     tag_type=args.tag_type)
 
 
 if __name__ == '__main__':
