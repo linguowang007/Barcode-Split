@@ -2,6 +2,7 @@ import os
 import bisect
 import argparse
 from array import array
+from .dependence import bgzip
 
 
 def slice_bgzip(*, bgzip_file, pos1, pos2, out_file, file_mode='ab'):
@@ -42,9 +43,9 @@ def slice_bgzip(*, bgzip_file, pos1, pos2, out_file, file_mode='ab'):
 
     a, b = left_pos
     if file_mode == 'ab':
-        os.system(f'bgzip -b {a} -s {b - a} {bgzip_file} | bgzip >> {out_file}')
+        os.system(f'{bgzip} -b {a} -s {b - a} {bgzip_file} | {bgzip} >> {out_file}')
     else:
-        os.system(f'bgzip -b {a} -s {b - a} {bgzip_file} | bgzip > {out_file}')
+        os.system(f'{bgzip} -b {a} -s {b - a} {bgzip_file} | {bgzip} > {out_file}')
 
     with open(bgzip_file, 'rb') as ori_f:
         block_size = 1024 * 4
@@ -63,7 +64,7 @@ def slice_bgzip(*, bgzip_file, pos1, pos2, out_file, file_mode='ab'):
             write_f.write(con)
 
     a, b = right_pos
-    os.system(f'bgzip -b {a} -s {b - a} {bgzip_file} | bgzip >> {out_file}')
+    os.system(f'{bgzip} -b {a} -s {b - a} {bgzip_file} | {bgzip} >> {out_file}')
 
     return out_file
 
