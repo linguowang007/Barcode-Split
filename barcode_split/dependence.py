@@ -4,17 +4,11 @@ from .exception import SplitBAMError
 
 def get_latest_version_in_path(executable_name):
     paths = os.environ["PATH"].split(os.pathsep)
-    latest_version = None
-    
     for path in paths:
         executable_path = os.path.join(path, executable_name)
         if os.path.isfile(executable_path) and os.access(executable_path, os.X_OK):
-            latest_version = executable_path  # the latest version tools
-    
-    if latest_version:
-        return latest_version
-    else:
-        raise SplitBAMError(f"{executable_name} not found in PATH.")
+            return executable_path
+    raise SplitBAMError(f"{executable_name} not found in PATH.")
 
 
 # get the latest version tools in $PATH
