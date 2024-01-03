@@ -49,7 +49,7 @@ def get_chunk_index(bgzip_sam, pos1, len1, out_file, tag='CB', tag_type='Z'):
     pre_len = len(f'{tag}:{tag_type}:') + 1
     index_cmd = rf'''{bgzip} -b {pos1} -s {len1} {bgzip_sam} | \
         {mawk} '{{for (i=12; i<=NF; i++) {{
-            if($i~/^{tag}:{tag_type}:/){{cb=substr($i, {pre_len}); print cb"\t"see[cb]++"\t"length+1; next;}} }}
+            if($i~/^{tag}:{tag_type}:/){{cb=substr($i, {pre_len}); print cb"\t"++see[cb]"\t"length+1; next;}} }}
         }}' | {bgzip}  > {out_file}
         {tabix} -s1 -b2 -e2 -C {out_file}'''
     with open(f'{out_file}.sh', 'wt') as h1:
