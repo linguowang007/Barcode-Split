@@ -6,7 +6,8 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'split_bam_by_tag = barcode_split.split_bam_file:main'
+            'split_bam_by_tag = barcode_split.split_bam_file:main',
+            'slice_bgzip = barcode_split.slice_bgzip:main'
         ]
     },
 )
