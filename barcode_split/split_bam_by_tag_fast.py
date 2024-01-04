@@ -43,7 +43,7 @@ def chunk_sort(sam_file, chunk_file, header_file, s_pos, q_len, tag='CB', tag_ty
 
 def second_sort(out_file, header_file, group_name, group_row, tag='CB'):
     inter_cmd = [f'cp {header_file} {out_file}']
-    inter_cmd.extend([f'{bgzip} -b {s_pos} -s {q_len} {chunk_file} | bgzip >> {out_file}'
+    inter_cmd.extend([f'{bgzip} -b {s_pos} -s {q_len} {chunk_file} | {bgzip} >> {out_file}'
                       for chunk_file, s_pos, q_len, _ in group_row])
     inter_cmd.append(rf'''{samtools} sort -t {tag} -O SAM \
         -T {out_file}.body.gz- {out_file} | \
