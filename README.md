@@ -22,13 +22,17 @@ To use the `barcode_split` package, please ensure the following dependencies are
 
 # How to Use barcode_split
 
-The Barcode-Split algorithm, encapsulated in the **split_bam_by_tag** function within the **barcode_split** package, can be utilized in two ways:
+The Barcode-Split algorithm is encapsulated in the `split_bam_by_tag` or `split_bam_by_tag_fast` function within the `barcode_split` package. Both functions have the same usage in terms of parameters and return results. However, the `split_bam_by_tag_fast` function optimizes the sorting procedures using samtools and can leverage multi-core computing capabilities, resulting in faster execution compared to `split_bam_by_tag` in multi-processing models.
+
+Both functions can be utilized in two ways:
 
 ## As a Standalone Command-Line Tool. 
 After installing **barcode_split** package, the **split_bam_by_tag** tool is automatically added to your system's environment variables. Use "**```which split_bam_by_tag```**" can locate it.
 
 ### Usage:
 split_bam_by_tag [-h] --bam BAM --tag_list TAG_LIST --out_dir OUT_DIR [--nt NT] [--tag TAG] [--tag_type TAG_TYPE]
+
+split_bam_by_tag_fast [-h] --bam BAM --tag_list TAG_LIST --out_dir OUT_DIR [--nt NT] [--tag TAG] [--tag_type TAG_TYPE]
 
 ### Example command in the terminal:
 
