@@ -43,18 +43,24 @@ This command will split bamfile.bam by the values of CB and output the sub-BAM f
 ## As a Python Package Called from Other Python Scripts. 
 Add the following code to your Python script (or an interactive Python session):
 ```
-from barcode_split import split_bam_by_tag
+from barcode_split import split_bam_by_tag, split_bam_by_tag_fast
 
-help(split_bam_by_tag) # help information of split_bam_by_tag function
+help(split_bam_by_tag)  # help information of split_bam_by_tag function
 
 split_result = split_bam_by_tag(bam="path/to/bamfile.bam",
-                 tag_list="path/to/tags.txt",
-                 out_dir="out-dir-name",
-                 nt=8,
-                 tag="CB",
-                 tag_type="Z")
-                 
-#"split_result" is a return dictionary where keys are CBs and values are paths to the split sub-BAM files.
+                                tag_list="path/to/tags.txt",
+                                out_dir="out-dir-name",
+                                nt=8,
+                                tag="CB",
+                                tag_type="Z")
+
+# use up to 112 threads, with split_bam_by_tag_fast function 
+split_result2 = split_bam_by_tag_fast(bam="path/to/bamfile.bam",
+                                      tag_list="path/to/tags.txt",
+                                      out_dir="out-dir-name-fast",
+                                      nt=112,
+                                      tag="CB",
+                                      tag_type="Z")
 ```
 
 # Run test on Demuxlet paper data
