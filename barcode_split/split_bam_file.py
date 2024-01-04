@@ -28,7 +28,7 @@ def de_duplicates(input_list, key=None):
     return dedup_list
 
 
-def estimate_break_position(bgzip_file, chunk_size=1000000000):
+def estimate_break_position(*, bgzip_file, chunk_size=1000000000):
     # chunk the bgzip file in chunks_size and ensure all chunk end with '\n'
     break_pos = 0
     break_pos_list = [break_pos]
@@ -114,7 +114,7 @@ def split_bam_by_tag(*, bam, tag_list, out_dir, nt=16, tag='CB', tag_type='Z'):
         logging.info(f'Sort by {tag}: {round(time.monotonic() - t1, 2)} sec.')
         
         t1 = time.monotonic()
-        break_pos_list = estimate_break_position(sam_file)  # start pos in sam file, query length
+        break_pos_list = estimate_break_position(bgzip_file=sam_file)  # start pos in sam file, query length
         # def get_chunk_index(sam_file, pos1, len1, out_file, tag='CB', tag_type='Z'):
         args = [(sam_file, pos1, len1, f'{sam_file}-{num}.gz', tag, tag_type) for num, (pos1, len1) in
                 enumerate(break_pos_list)]
