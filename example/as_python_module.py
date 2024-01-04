@@ -13,7 +13,7 @@ bam_file = 'A.merged.bam'
 tag_list_file = 'GSM2560245_barcodes.tsv'
 out_dir_name = 'split_test'
 
-result = split_bam_by_tag(bam_file, tag_list_file, out_dir_name, nt=16)
+result = split_bam_by_tag(bam=bam_file, tag_list=tag_list_file, out_dir=out_dir_name, nt=16)
 
 print(f'Split {len(result)} cells.')
 
