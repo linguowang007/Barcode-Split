@@ -8,7 +8,8 @@ setup(
         'console_scripts': [
             'split_bam_by_tag = barcode_split.split_bam_file:main',
             'slice_bgzip = barcode_split.slice_bgzip:main',
-            'split_bam_by_tag_fast = barcode_split.split_bam_by_tag_fast:main'
+            'split_bam_by_tag_fast = barcode_split.split_bam_by_tag_fast:main',
+            'sort_tag = barcode_split.sort_tag:main',
         ]
     },
 )
