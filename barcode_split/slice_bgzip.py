@@ -1,11 +1,13 @@
 import os
 import bisect
 import argparse
+import mmap
+import io
 from array import array
-from .dependence import bgzip
+from dependence import bgzip
 
 
-def slice_bgzip(*, bgzip_file, pos1, pos2, out_file, file_mode='ab'):
+def slice_bgzip(*, bgzip_file, pos1, pos2, out_file, file_mode='ab', buffer_size=10240):
     """
     Extracts a slice from a bgzip compressed file.
 
@@ -14,6 +16,7 @@ def slice_bgzip(*, bgzip_file, pos1, pos2, out_file, file_mode='ab'):
        pos1 (int): Starting byte position of the slice.
        pos2 (int): Ending byte position of the slice.
        out_file (str): Output file path.
+       buffer_size (int): buffer size of binary file writing.
        file_mode (str): File mode for output file. Either 'ab' (append binary) or 'wb' (write binary).
 
     Returns:
@@ -47,21 +50,13 @@ def slice_bgzip(*, bgzip_file, pos1, pos2, out_file, file_mode='ab'):
     else:
         os.system(f'{bgzip} -b {a} -s {b - a} {bgzip_file} | {bgzip} > {out_file}')
 
-    with open(bgzip_file, 'rb') as ori_f:
-        block_size = 1024 * 4
-        a, b = con_gzip
-        ori_f.seek(a)
-        q_len = b - a
-        num, len1 = divmod(q_len, block_size)
-
-        count = 0
-        with open(out_file, 'ab') as write_f:
-            while count < num:
-                con = ori_f.read(block_size)
-                count += 1
-                write_f.write(con)
-            con = ori_f.read(len1)
-            write_f.write(con)
+    a, b = con_gzip
+    with open(bgzip_file, 'rb') as f1, open(out_file, 'ab') as f2:
+        mmap_file = mmap.mmap(f1.fileno(), 0, access=mmap.ACCESS_READ)
+        output_stream = io.BufferedWriter(f2, buffer_size)
+        output_stream.write(mmap_file[a:b])
+        output_stream.close()
+        mmap_file.close()
 
     a, b = right_pos
     os.system(f'{bgzip} -b {a} -s {b - a} {bgzip_file} | {bgzip} >> {out_file}')
@@ -75,6 +70,7 @@ def parse_arguments():
     parser.add_argument("--pos1", required=True, type=int, help="Starting byte position of the slice.")
     parser.add_argument("--pos2", required=True, type=int, help="Ending byte position of the slice.")
     parser.add_argument("--out_file", required=True, help="Output file path.")
+    parser.add_argument("--buffer_size", default=10240, type=int, help="Buffer size of writing.")
     parser.add_argument("--file_mode", default='ab', choices=['ab', 'wb'],
                         help="File mode for writing to output file (default: 'ab').")
     return parser.parse_args()
@@ -83,7 +79,7 @@ def parse_arguments():
 def main():
     args = parse_arguments()
     slice_bgzip(bgzip_file=args.bgzip_file, pos1=args.pos1, pos2=args.pos2, out_file=args.out_file,
-                file_mode=args.file_mode)
+                file_mode=args.file_mode, buffer_size=args.buffer_size)
 
 
 if __name__ == "__main__":
